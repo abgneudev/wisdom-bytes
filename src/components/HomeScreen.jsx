@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { ALL_MODULES } from "../data/modules/index";
+import ModuleGrid from "./ui/ModuleGrid.jsx";
 
 const CATEGORY_COLORS = {
   Friendship:  { bg: "#eef2ff", text: "#4338ca" },
@@ -240,6 +241,7 @@ export default function HomeScreen({
           </button>
         </div>
 
+        <ModuleGrid/>
         {ALL_MODULES.map((mod) => {
           const cat = CATEGORY_COLORS[mod.category] || {
             bg: "#f8fafc",
