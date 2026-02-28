@@ -1,0 +1,73 @@
+/**
+ * Design tokens — Brilliant.org 2024 light-theme palette.
+ *
+ * Color philosophy (from Koto's refresh):
+ *   - Clean white / off-white surfaces, maximum content contrast
+ *   - Vivid "pear" green as primary CTA and progress indicator
+ *   - Soft periwinkle for interactive learning areas
+ *   - Each tradition gets its own saturated accent on white
+ *   - Minimal chrome — the interface disappears, content takes centre stage
+ */
+:root {
+  /* ── Brand / CTA ─────────────────────────────────────── */
+  --color-green-primary:    #22c55e; /* Brilliant pear-green — CTA, progress, success */
+  --color-green-light:      #dcfce7; /* success tint background */
+  --color-green-dark:       #15803d; /* XP label, success text */
+
+  /* ── Per-tradition accents (saturated on white) ─────── */
+  --color-accent-gita:      #f97316; /* warm amber-orange — Bhagavad Gita */
+  --color-accent-tao:       #0ea5e9; /* sky blue — Tao Te Ching */
+  --color-accent-buddhism:  #8b5cf6; /* violet — Buddhism */
+  --color-accent-bible:     #d97706; /* golden — Biblical */
+  --color-accent-rumi:      #ec4899; /* rose-pink — Rumi / Hadith */
+  --color-accent-narrative: #6366f1; /* indigo — opening / closing chapters */
+
+  /* ── Interactive area ────────────────────────────────── */
+  --color-puzzle-bg:        #e8edf8; /* soft periwinkle — Brilliant's puzzle zone */
+  --color-puzzle-border:    #d1d9f0;
+
+  /* ── Surface ─────────────────────────────────────────── */
+  --color-bg-app:           #f4f5f9; /* page wash — very light blue-gray */
+  --color-bg-card:          #ffffff;
+  --color-bg-inflection:    #fefce8; /* warm cream for "your turn" cards */
+  --color-surface-subtle:   #f8fafc;
+  --color-surface-hover:    #f1f5f9;
+
+  /* ── Text ────────────────────────────────────────────── */
+  --color-text-primary:     #0f172a; /* near-black */
+  --color-text-secondary:   #475569; /* slate-600 */
+  --color-text-tertiary:    #94a3b8; /* slate-400 */
+  --color-text-muted:       #cbd5e1; /* slate-300 */
+
+  /* ── Borders ─────────────────────────────────────────── */
+  --color-border-subtle:    #e2e8f0;
+  --color-border-medium:    #cbd5e1;
+  --color-border-accent:    rgba(34, 197, 94, 0.35); /* green-tinted for inflections */
+
+  /* ── Dashed empty slot (like Brilliant's code blocks) ── */
+  --color-slot-bg:          #ffffff;
+  --color-slot-border:      #c4c9d4;
+
+  /* ── Typography ──────────────────────────────────────── */
+  --font-display:           "DM Sans", system-ui, sans-serif;
+  --font-body:              "DM Sans", system-ui, sans-serif;
+  --font-mono:              "DM Mono", "Courier New", monospace;
+
+  /* ── Sizing ──────────────────────────────────────────── */
+  --card-max-width:         440px;
+  --card-height:            580px;     /* fixed — cards never resize with content */
+  --card-radius:            20px;
+  --card-padding:           0px;       /* inner sections own their own padding */
+  --illustration-height:    220px;     /* tinted visual zone */
+  --content-padding:        24px;
+
+  /* ── Shadows ─────────────────────────────────────────── */
+  --shadow-card:            0 2px 8px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  --shadow-card-hover:      0 8px 24px rgba(15, 23, 42, 0.12);
+  --shadow-button:          0 2px 4px rgba(34, 197, 94, 0.25);
+
+  /* ── Motion ──────────────────────────────────────────── */
+  --transition-slide:       0.25s ease;
+  --transition-color:       0.3s ease;
+  --transition-fast:        0.15s ease;
+}
