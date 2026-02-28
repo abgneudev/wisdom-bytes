@@ -51,7 +51,7 @@ function ErrorState({ onRetry }) {
       }}
     >
       <p style={{ fontSize: 14, color: "#991b1b", margin: "0 0 12px" }}>
-        The mirror is clouded right now. Let's try again.
+        The reflection service is busy right now — wait a moment and try again.
       </p>
       <button
         onClick={onRetry}
@@ -81,6 +81,7 @@ function ReflectionEntry({ contextKey, ctx, response, reflection }) {
       className="animate-slide-up"
       style={{
         marginBottom: 16,
+        flexShrink: 0,
         borderRadius: 12,
         border: "1px solid var(--color-border-subtle)",
         overflow: "hidden",
@@ -139,6 +140,8 @@ function ReflectionEntry({ contextKey, ctx, response, reflection }) {
             lineHeight: 1.7,
             color: "var(--color-text-secondary)",
             margin: 0,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
           }}
         >
           {reflection}
@@ -211,10 +214,9 @@ export default function ReflectionCard({
       <div
         style={{
           flex: 1,
+          minHeight: 0,
           overflowY: "auto",
-          padding: "16px var(--content-padding)",
-          display: "flex",
-          flexDirection: "column",
+          padding: "16px var(--content-padding) 24px",
         }}
       >
         <p

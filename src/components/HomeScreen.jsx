@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { ALL_MODULES } from "../data/modules/index";
 
 const CATEGORY_COLORS = {
@@ -12,9 +14,28 @@ const CATEGORY_COLORS = {
 
 /**
  * Library home screen — shows all available modules as a card grid.
- * @param {{ onSelect: (module: object) => void }} props
+ * @param {{
+ *   onSelect: (module: object) => void,
+ *   onGenerate: (prompt: string) => Promise<void>,
+ *   isGenerating: boolean,
+ *   generationError: string,
+ * }} props
  */
-export default function HomeScreen({ onSelect }) {
+export default function HomeScreen({
+  onSelect,
+  onGenerate,
+  isGenerating,
+  generationError,
+}) {
+  const [prompt, setPrompt] = useState("");
+  const PROMPT_MAX = 500;
+  const hasPrompt = prompt.trim().length > 0;
+
+  const handleGenerateClick = () => {
+    if (!hasPrompt || isGenerating) return;
+    onGenerate(prompt.trim());
+  };
+
   return (
     <div
       style={{
@@ -101,6 +122,124 @@ export default function HomeScreen({ onSelect }) {
           gap: 12,
         }}
       >
+        <div
+          style={{
+            background: "#ffffff",
+            border: "1px solid var(--color-border-subtle)",
+            borderRadius: 16,
+            padding: 16,
+            boxShadow: "var(--shadow-card)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 8,
+              gap: 12,
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 15,
+                color: "var(--color-text-primary)",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Generate your own story
+            </h2>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: "var(--color-green-dark)",
+                background: "var(--color-green-light)",
+                borderRadius: 100,
+                padding: "3px 8px",
+                fontFamily: "var(--font-mono)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                flexShrink: 0,
+              }}
+            >
+              Real-time
+            </span>
+          </div>
+
+          <p
+            style={{
+              margin: "0 0 10px",
+              fontSize: 13,
+              color: "var(--color-text-secondary)",
+              lineHeight: 1.5,
+            }}
+          >
+            Describe what you're going through. The lesson will be generated with
+            story chapters, inflection pauses, and a final reflection.
+          </p>
+
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value.slice(0, PROMPT_MAX))}
+            placeholder="Ex: I keep overthinking every decision and feel stuck between options."
+            maxLength={PROMPT_MAX}
+            rows={4}
+            style={{
+              width: "100%",
+              resize: "vertical",
+              boxSizing: "border-box",
+              borderRadius: 12,
+              border: `1px solid ${hasPrompt ? "var(--color-border-accent)" : "var(--color-border-medium)"}`,
+              padding: "12px 14px",
+              fontFamily: "var(--font-body)",
+              fontSize: 14,
+              color: "var(--color-text-primary)",
+              background: "#ffffff",
+              lineHeight: 1.55,
+              marginBottom: 10,
+              outline: "none",
+            }}
+          />
+
+          {generationError && (
+            <p
+              style={{
+                margin: "0 0 10px",
+                fontSize: 12,
+                color: "var(--color-text-secondary)",
+              }}
+            >
+              {generationError}
+            </p>
+          )}
+
+          <button
+            onClick={handleGenerateClick}
+            disabled={!hasPrompt || isGenerating}
+            style={{
+              width: "100%",
+              border: "none",
+              borderRadius: 100,
+              padding: "12px 16px",
+              cursor: !hasPrompt || isGenerating ? "not-allowed" : "pointer",
+              background:
+                !hasPrompt || isGenerating
+                  ? "var(--color-border-subtle)"
+                  : "var(--color-green-primary)",
+              color: !hasPrompt || isGenerating ? "var(--color-text-muted)" : "#ffffff",
+              fontSize: 14,
+              fontWeight: 700,
+              fontFamily: "var(--font-display)",
+              boxShadow:
+                !hasPrompt || isGenerating ? "none" : "var(--shadow-button)",
+            }}
+          >
+            {isGenerating ? "Generating your lesson..." : "Generate story"}
+          </button>
+        </div>
+
         {ALL_MODULES.map((mod) => {
           const cat = CATEGORY_COLORS[mod.category] || {
             bg: "#f8fafc",

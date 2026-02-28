@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
 
-/**
- * Klipy API key — paste your app key from https://partner.klipy.com/api-keys
- * The key is embedded in the URL path: /api/v1/{KLIPY_APP_KEY}/stickers/search
- */
-export const KLIPY_APP_KEY = "ami4pXjYIx1jK3Qyj1auHOFrNxwJwtjpFIjl28ESYhhE5y9cSvIZWPoApswjeUrK";
+/** Klipy partner key — set VITE_KLIPY_APP_KEY in your .env file. */
+const KLIPY_APP_KEY = import.meta.env.VITE_KLIPY_APP_KEY ?? "";
 
 /** Stable customer ID — Klipy requires one per request. */
 const CUSTOMER_ID = "mindful-app";

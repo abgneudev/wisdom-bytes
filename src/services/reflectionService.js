@@ -1,8 +1,8 @@
 /**
- * Calls the Anthropic API to generate personalised reflections
+ * Calls the Groq API to generate personalised reflections
  * against the learner's inflection responses for any module.
  *
- * NOTE: The API key must be set in the `VITE_ANTHROPIC_API_KEY`
+ * NOTE: The API key must be set in the `VITE_GROQ_API_KEY`
  * environment variable (add it to a local `.env` file).
  *
  * @param {Record<string, string>} responses — keyed by inflectionKey
@@ -11,39 +11,60 @@
  * @returns {Promise<Record<string, string> | null>}
  */
 export async function generateReflections(responses, context, moduleMeta = {}) {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!apiKey) {
+    console.error("Missing VITE_GROQ_API_KEY");
+    return null;
+  }
 
+  const contextKeys = Object.keys(context);
   const prompt = buildPrompt(responses, context, moduleMeta);
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const maxTokens = attempt === 0 ? 900 : 1400;
+      const temperature = attempt === 0 ? 0.5 : 0.35;
 
-    if (!res.ok) {
-      console.error("Anthropic API error:", res.status, await res.text());
-      return null;
+      const res = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: [{ role: "user", content: prompt }],
+            temperature,
+            max_tokens: maxTokens,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const errBody = await res.text();
+        console.error("Groq API error:", res.status, errBody);
+        return null;
+      }
+
+      const data = await res.json();
+      const choice = data.choices?.[0] ?? {};
+      const text = choice.message?.content ?? "";
+      const finishReason = choice.finish_reason ?? "";
+
+      let parsed;
+      try {
+        parsed = parseReflectionPayload(text);
+      } catch (parseErr) {
+        if (attempt === 0 && finishReason === "length") continue;
+        throw parseErr;
+      }
+
+      return normalizeReflections(parsed, contextKeys, responses, context);
     }
 
-    const data = await res.json();
-    const text = data.content
-      .map((block) => (block.type === "text" ? block.text : ""))
-      .filter(Boolean)
-      .join("");
-
-    const clean = text.replace(/```json|```/g, "").trim();
-    return JSON.parse(clean);
+    return null;
   } catch (err) {
     console.error("Reflection generation failed:", err);
     return null;
@@ -51,7 +72,7 @@ export async function generateReflections(responses, context, moduleMeta = {}) {
 }
 
 /**
- * Builds the prompt string sent to Claude — works for any module.
+ * Builds the prompt string for Gemini — kept intentionally short to stay within free-tier token limits.
  * @param {Record<string, string>} responses
  * @param {Record<string, { label: string, storyContext: string }>} context
  * @param {{ title: string, subtitle: string }} moduleMeta
@@ -63,29 +84,102 @@ function buildPrompt(responses, context, moduleMeta) {
   const inflectionBlocks = keys
     .map((key, i) => {
       const ctx = context[key];
-      return `INFLECTION ${i + 1} — "${ctx.label}"
-Context: ${ctx.storyContext}
-Student wrote: "${responses[key] || "(skipped)"}"`;
+      return `Q${i + 1} (${ctx.label}): "${responses[key] || "(skipped)"}"`;
     })
-    .join("\n\n");
+    .join("\n");
 
   const jsonShape = keys
-    .map((key) => `"${key}": "your reflection on their response"`)
+    .map((key) => `"${key}": "2-3 sentence reflection"`)
     .join(", ");
 
-  return `You are a wise, warm teacher reflecting on a student's responses to "${storyTitle}" — a parable drawing on multiple wisdom traditions (Bhagavad Gita, Tao Te Ching, Buddhism, Bible, Quran, Rumi, Stoicism).
-
-At key inflection points in the story, the student paused and shared their thoughts. Your job is to reflect their answers back to them — not lecture, but mirror. Be specific about THEIR words.
-
-For each response:
-- If their thinking aligns with the wisdom: affirm it specifically and deepen it by connecting to the tradition.
-- If there's a gap: gently show what both paths might look like. Let them see the difference themselves.
-- If they're partially right: acknowledge what they got, then show the missing piece.
-
-Be concise (3-4 sentences per reflection). Write like a thoughtful friend, not a professor. Use "you" directly.
+  return `You are a warm teacher. A student read "${storyTitle}" and answered these questions:
 
 ${inflectionBlocks}
 
-Respond ONLY with a JSON object — no markdown, no backticks, no preamble:
+Write a brief, personal 2-3 sentence reflection for each answer — mirror their words back, connect to wisdom traditions, use "you". Be a thoughtful friend, not a lecturer.
+Each value must be complete prose and end with normal sentence punctuation.
+
+Reply ONLY with this JSON (no markdown):
 {${jsonShape}}`;
+}
+
+function parseReflectionPayload(rawText) {
+  const clean = (rawText || "").replace(/```json|```/gi, "").trim();
+  const start = clean.indexOf("{");
+  const end = clean.lastIndexOf("}");
+
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("No JSON object found in reflection response");
+  }
+
+  const jsonChunk = clean.slice(start, end + 1);
+  return JSON.parse(jsonChunk);
+}
+
+function normalizeReflections(parsed, contextKeys, responses, context) {
+  const normalized = {};
+
+  for (const key of contextKeys) {
+    const raw = typeof parsed?.[key] === "string" ? parsed[key].trim() : "";
+    if (!raw || looksIncomplete(raw)) {
+      normalized[key] = buildFallbackReflection(responses[key], context[key]);
+      continue;
+    }
+
+    const squashed = raw.replace(/\s+/g, " ").trim();
+    normalized[key] = /[.!?\)\]"'”’]$/.test(squashed) ? squashed : `${squashed}.`;
+  }
+
+  return normalized;
+}
+
+function looksIncomplete(text) {
+  const squashed = text.replace(/\s+/g, " ").trim();
+  if (!squashed) return true;
+
+  const hasTerminalPunctuation = /[.!?\)\]"'”’]$/.test(squashed);
+  if (!hasTerminalPunctuation) return true;
+
+  const words = squashed.toLowerCase().split(/\s+/);
+  const lastWord = (words[words.length - 1] || "").replace(/[^a-z]/g, "");
+  const danglingWords = new Set([
+    "to",
+    "and",
+    "or",
+    "but",
+    "of",
+    "for",
+    "with",
+    "from",
+    "in",
+    "on",
+    "at",
+    "by",
+    "about",
+    "because",
+    "that",
+    "which",
+    "if",
+    "when",
+    "while",
+    "as",
+    "than",
+    "a",
+    "an",
+    "the",
+  ]);
+
+  return danglingWords.has(lastWord);
+}
+
+function buildFallbackReflection(response, contextItem) {
+  const label = contextItem?.label?.toLowerCase() || "this moment";
+  const trimmed = (response || "").trim();
+
+  if (!trimmed) {
+    return `You paused at ${label}, and that pause still tells a story. Notice what feeling appears when you return to this moment, and name it gently without judging yourself.`;
+  }
+
+  const excerpt = trimmed.length > 120 ? `${trimmed.slice(0, 117)}...` : trimmed;
+  return `You named "${excerpt}," and that shows honest self-awareness. Across wisdom traditions, growth begins by seeing the pattern clearly, then loosening your grip just enough to choose your next step with intention.`;
 }
